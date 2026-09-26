@@ -606,15 +606,4 @@ void WINAPI RtlWakeAddressSingle(const void*);
 }
 #endif
 
-#ifdef FEX_TEB_TSD_OFFSET
-// arm64 Darwin hosts: the kernel does not preserve x18, so Wine keeps the TEB in a pthread TSD slot
-// reached through TPIDRRO_EL0 (its -D__WINE_TEB_TSD_OFFSET). Read it from there instead of x18.
-#define FEX_TEB_TSD_STR_(x) #x
-#define FEX_TEB_TSD_STR(x) FEX_TEB_TSD_STR_(x)
-static inline struct _TEB* FEXCurrentTeb(void) {
-  struct _TEB* Teb;
-  __asm__("mrs %0, tpidrro_el0\n\tldr %0, [%0, #" FEX_TEB_TSD_STR(FEX_TEB_TSD_OFFSET) "]" : "=r"(Teb));
-  return Teb;
-}
-#define NtCurrentTeb() FEXCurrentTeb()
-#endif
+#include "TEBFromTSD.h"

@@ -354,6 +354,10 @@ endif()
 if (ENABLE_FEX_ALLOCATOR)
   # The rpmalloc subproject that all FEXCore fextl objects allocate through.
   add_subdirectory(External/rpmalloc/)
+  if (MINGW AND FEX_TEB_TSD_OFFSET)
+    # rpmalloc tells threads apart by NtCurrentTeb(), which mingw reads from x18.
+    target_compile_options(rpmalloc PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/Source/Windows/include/TEBFromTSD.h)
+  endif()
 elseif (NOT MINGW)
   message (STATUS
     " FEX allocator is disabled!\n"
