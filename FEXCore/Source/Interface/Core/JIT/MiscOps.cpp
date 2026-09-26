@@ -351,7 +351,7 @@ DEF_OP(Yield) {
 DEF_OP(MonoBackpatcherWrite) {
   auto Op = IROp->C<IR::IROp_MonoBackpatcherWrite>();
 
-  mov(ARMEmitter::Size::i64Bit, TMP3, GetReg(Op->Addr));
+  mov(ARMEmitter::Size::i64Bit, TMP3, GetMemReg(Op->Addr));
   mov(ARMEmitter::Size::i64Bit, TMP4, GetReg(Op->Value));
 
   PushDynamicRegs(TMP1);

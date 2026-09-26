@@ -2679,6 +2679,7 @@ void Dispatcher::InitThreadPointers(FEXCore::Core::InternalThreadState* Thread) 
   {
     auto& Ptrs = Thread->CurrentFrame->Pointers;
 
+    Ptrs.GuestAddressWindow = CTX->GuestAddressWindow;
     Ptrs.DispatcherLoopTop = AbsoluteLoopTopAddress;
     Ptrs.DispatcherLoopTopFillSRA = AbsoluteLoopTopAddressFillSRA;
     Ptrs.DispatcherLoopTopEnterEC = AbsoluteLoopTopAddressEnterEC;

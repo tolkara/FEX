@@ -135,6 +135,11 @@ private:
   }
 
   [[nodiscard]]
+  // Register holding the host address for the guest address in the given node. A 32-bit guest whose
+  // address space sits at a window gets its address zero-extended and added to the window base into
+  // a scratch register; everything else is the register itself.
+  ARMEmitter::Register GetMemReg(IR::OrderedNodeWrapper Wrap);
+
   ARMEmitter::Register GetReg(IR::OrderedNodeWrapper Wrap) const {
     return GetReg(IR::PhysicalRegister(Wrap));
   }

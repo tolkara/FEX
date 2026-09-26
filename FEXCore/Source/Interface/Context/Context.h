@@ -149,6 +149,18 @@ public:
   void HandleCallback(FEXCore::Core::InternalThreadState* Thread, uint64_t RIP) override;
 
   bool IsAddressInCurrentBlock(FEXCore::Core::InternalThreadState* Thread, uint64_t Address, uint64_t Size) override;
+
+  void SetGuestAddressWindow(uint64_t Base) override {
+    GuestAddressWindow = Base;
+  }
+  uint64_t GuestAddressWindow {};
+  // Host address of guest memory: identity unless the 32-bit address space sits at a window.
+  uint64_t GuestToHost(uint64_t GuestAddress) const {
+    return GuestAddress | GuestAddressWindow;
+  }
+  const uint8_t* GuestCodePointer(uint64_t GuestRIP) const {
+    return reinterpret_cast<const uint8_t*>(GuestToHost(GuestRIP));
+  }
   bool IsCurrentBlockSingleInst(FEXCore::Core::InternalThreadState* Thread) override;
   uint64_t GetGuestBlockEntry(FEXCore::Core::InternalThreadState* Thread) override;
 

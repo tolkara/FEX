@@ -117,6 +117,11 @@ elseif (processor MATCHES "^aarch64|^arm64|^armv8\.*")
   if (FEX_TEB_TSD_OFFSET)
     add_compile_definitions(FEX_TEB_TSD_OFFSET=${FEX_TEB_TSD_OFFSET})
   endif()
+  option(FEX_GUEST_ADDRESS_WINDOW "32-bit guest address space lives at a 4 GB-aligned host window (arm64 Darwin hosts)" FALSE)
+  # Only the WoW64 module runs 32-bit guests; the ARM64EC module's register set has no room for the window registers.
+  if (FEX_GUEST_ADDRESS_WINDOW AND NOT MINGW_TRIPLE MATCHES "arm64ec")
+    add_compile_definitions(FEX_GUEST_ADDRESS_WINDOW=1)
+  endif()
 endif()
 
 if (NOT (ARCHITECTURE_arm64 OR ARCHITECTURE_arm64ec OR ARCHITECTURE_x86_64))

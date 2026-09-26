@@ -7,6 +7,7 @@
 #include <FEXCore/Config/Config.h>
 #include <FEXCore/Debug/InternalThreadState.h>
 #include "InvalidationTracker.h"
+#include "AddressWindow.h"
 #include <windef.h>
 #include <winternl.h>
 
@@ -278,7 +279,8 @@ void InvalidationTracker::DetectMonoBackpatcherBlock(FEXCore::Core::InternalThre
   }
 
   static constexpr uint8_t XChgOp = 0x87;
-  if (*reinterpret_cast<uint8_t*>(RIP) != XChgOp && *reinterpret_cast<uint8_t*>(RIP + 1) != XChgOp) {
+  const auto* Code = reinterpret_cast<uint8_t*>(FEX::Windows::AddressWindow::ToHost(RIP));
+  if (Code[0] != XChgOp && Code[1] != XChgOp) {
     return;
   }
 
@@ -332,9 +334,11 @@ void InvalidationTracker::InvalidateIntervalInternal(uint64_t Address, uint64_t 
 
 void InvalidationTracker::InvalidateIntervalInternalLocked(uint64_t Address, uint64_t Size) {
   // NOTE: This assumes CodeInvalidationMutex is locked by the caller
-  CTX.InvalidateCodeBuffersCodeRange(Address, Size);
+  // The tracker works in host addresses (it queries and protects host pages); the code caches are keyed by guest address.
+  const uint64_t GuestAddress = FEX::Windows::AddressWindow::ToGuest(Address);
+  CTX.InvalidateCodeBuffersCodeRange(GuestAddress, Size);
   for (auto Thread : Threads) {
-    CTX.InvalidateThreadCachedCodeRange(Thread.second, Address, Size);
+    CTX.InvalidateThreadCachedCodeRange(Thread.second, GuestAddress, Size);
   }
 }
 

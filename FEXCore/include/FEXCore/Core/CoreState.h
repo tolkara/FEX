@@ -337,6 +337,7 @@ struct FallbackABIInfo {
 struct JITPointers {
 
   // Process specific
+  uint64_t GuestAddressWindow {}; // host address of guest address 0 for a 32-bit guest at a window
   uint64_t PrintValue {};
   uint64_t PrintVectorValue {};
   uint64_t PrintMsgValue {};

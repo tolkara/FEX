@@ -47,6 +47,13 @@ constexpr auto REG_AF = ARMEmitter::Reg::r27;
 
 constexpr auto REG_CALLRET_SP = ARMEmitter::XReg::x25;
 
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+// 32-bit guests at a window: the window's host base, and the scratch that holds a translated address.
+// Both are taken out of the 32-bit allocatable set and are callee saved, so calls out of the JIT keep them.
+constexpr auto REG_GUEST_WINDOW = ARMEmitter::XReg::x24;
+constexpr auto REG_GUEST_ADDR = ARMEmitter::XReg::x19;
+#endif
+
 // Vector temporaries
 constexpr auto VTMP1 = ARMEmitter::VReg::v0;
 constexpr auto VTMP2 = ARMEmitter::VReg::v1;

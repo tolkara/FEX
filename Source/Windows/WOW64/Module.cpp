@@ -39,6 +39,7 @@ $end_info$
 #include "Common/TSOHandlerConfig.h"
 #include "Common/ImageTracker.h"
 #include "Common/InvalidationTracker.h"
+#include "Common/AddressWindow.h"
 #include "Common/Threads.h"
 #include "Common/OvercommitTracker.h"
 #include "Common/CPUFeatures.h"
@@ -227,7 +228,8 @@ void LoadStateFromWowContext(FEXCore::Core::InternalThreadState* Thread) {
 
   // The TEB is the only populated GDT entry by default
   auto GDT = State.GetSegmentFromIndex(State, (Context->SegFs & 0xffff));
-  uint64_t WowTEB = GetWowTEB(NtCurrentTeb());
+  // Segment bases are guest addresses; the JIT applies the address window when it forms host addresses.
+  uint64_t WowTEB = FEX::Windows::AddressWindow::ToGuest(GetWowTEB(NtCurrentTeb()));
   State.SetGDTBase(GDT, WowTEB);
   State.SetGDTLimit(GDT, 0xF'FFFFU);
   State.fs_cached = WowTEB;
@@ -426,26 +428,28 @@ public:
   WowSyscallHandler() = default;
 
   static void HandleSyscallImpl(FEXCore::Core::CpuStateFrame* Frame) {
-    const uint64_t ReturnRIP = *(uint32_t*)(Frame->State.gregs[FEXCore::X86State::REG_RSP]); // Return address from the stack
-    uint64_t ReturnRSP = Frame->State.gregs[FEXCore::X86State::REG_RSP] + 4;                 // Stack pointer after popping return address
+    using FEX::Windows::AddressWindow::ToGuest;
+    using FEX::Windows::AddressWindow::ToHost;
+    const uint64_t ReturnRIP = *(uint32_t*)ToHost(Frame->State.gregs[FEXCore::X86State::REG_RSP]); // Return address from the stack
+    uint64_t ReturnRSP = Frame->State.gregs[FEXCore::X86State::REG_RSP] + 4; // Stack pointer after popping return address
     uint64_t ReturnRAX = 0;
 
-    if (Frame->State.rip == (uint64_t)BridgeInstrs::UnixCall) {
+    if (Frame->State.rip == ToGuest((uint64_t)BridgeInstrs::UnixCall)) {
       struct StackLayout {
         unixlib_handle_t Handle;
         UINT32 ID;
         ULONG32 Args;
-      }* StackArgs = reinterpret_cast<StackLayout*>(ReturnRSP);
+      }* StackArgs = reinterpret_cast<StackLayout*>(ToHost(ReturnRSP));
 
       Frame->State.gregs[FEXCore::X86State::REG_RSP] = ReturnRSP + sizeof(StackLayout);
       Frame->State.rip = ReturnRIP;
 
       Context::FlushThreadStateContext();
       Context::UnlockJITContext();
-      ReturnRAX = static_cast<uint64_t>(WineUnixCall(StackArgs->Handle, StackArgs->ID, ULongToPtr(StackArgs->Args)));
+      ReturnRAX = static_cast<uint64_t>(WineUnixCall(StackArgs->Handle, StackArgs->ID, reinterpret_cast<void*>(ToHost(StackArgs->Args))));
       Context::LockJITContext();
       Frame->State.gregs[FEXCore::X86State::REG_RAX] = ReturnRAX;
-    } else if (Frame->State.rip == (uint64_t)BridgeInstrs::Syscall) {
+    } else if (Frame->State.rip == ToGuest((uint64_t)BridgeInstrs::Syscall)) {
       const uint64_t EntryRAX = Frame->State.gregs[FEXCore::X86State::REG_RAX];
 
       Frame->State.gregs[FEXCore::X86State::REG_RSP] = ReturnRSP;
@@ -454,7 +458,7 @@ public:
       Context::FlushThreadStateContext();
       Context::UnlockJITContext();
       Wow64ProcessPendingCrossProcessItems();
-      ReturnRAX = static_cast<uint64_t>(Wow64SystemServiceEx(static_cast<UINT>(EntryRAX), reinterpret_cast<UINT*>(ReturnRSP + 4)));
+      ReturnRAX = static_cast<uint64_t>(Wow64SystemServiceEx(static_cast<UINT>(EntryRAX), reinterpret_cast<UINT*>(ToHost(ReturnRSP + 4))));
       Context::LockJITContext();
       Frame->State.gregs[FEXCore::X86State::REG_RAX] = ReturnRAX;
     }
@@ -530,6 +534,9 @@ void BTCpuProcessInit() {
     auto HostFeatures =
       FEX::Windows::CPUFeatures::FetchHostFeatures(IsWine, FEXCore::HostFeatures::HostTypeEnum::Wow64, FEX::Windows::UnixLib::GetPID());
     CTX = FEXCore::Context::Context::CreateNewContext(HostFeatures);
+    // The 32-bit TEB tells where the host put the 32-bit address space (nothing below 4 GB on arm64 Darwin).
+    FEX::Windows::AddressWindow::Base = GetWowTEB(NtCurrentTeb()) & ~0xffff'ffffULL;
+    CTX->SetGuestAddressWindow(FEX::Windows::AddressWindow::Base);
   }
 
   CTX->SetSignalDelegator(SignalDelegator.get());
@@ -749,7 +756,8 @@ bool BTCpuResetToConsistentStateImpl(EXCEPTION_POINTERS* Ptrs) {
       FEXCORE_PROFILE_INSTANT_INCREMENT(Thread, AccumulatedSMCCount, 1);
       if (InvalidationTracker->HandleRWXAccessViolation(Thread, Context->Pc, FaultAddress)) {
         if (CTX->IsAddressInCodeBuffer(Thread, Context->Pc) && !CTX->IsCurrentBlockSingleInst(Thread) &&
-            CTX->IsAddressInCurrentBlock(Thread, FaultAddress & FEXCore::Utils::FEX_PAGE_MASK, FEXCore::Utils::FEX_PAGE_SIZE)) {
+            CTX->IsAddressInCurrentBlock(Thread, FEX::Windows::AddressWindow::ToGuest(FaultAddress) & FEXCore::Utils::FEX_PAGE_MASK,
+                                         FEXCore::Utils::FEX_PAGE_SIZE)) {
           Context::ReconstructThreadState(Context);
           LogMan::Msg::DFmt("Handled inline self-modifying code: pc: {:X} rip: {:X} fault: {:X}", Context->Pc,
                             Thread->CurrentFrame->State.rip, FaultAddress);

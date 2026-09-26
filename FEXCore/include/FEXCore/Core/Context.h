@@ -80,6 +80,14 @@ public:
   FEX_DEFAULT_VISIBILITY virtual void HandleCallback(FEXCore::Core::InternalThreadState* Thread, uint64_t RIP) = 0;
 
   FEX_DEFAULT_VISIBILITY virtual bool IsAddressInCurrentBlock(FEXCore::Core::InternalThreadState* Thread, uint64_t Address, uint64_t Size) = 0;
+
+  /**
+   * @brief Host address of guest address 0 for a 32-bit guest whose address space sits at a window rather than at identity.
+   *
+   * Guest address g lives at host address (Base | g); the window is 4 GB-aligned so truncating a host address gives the guest one.
+   * Only meaningful with FEX_GUEST_ADDRESS_WINDOW builds; must be set before any thread is created.
+   */
+  FEX_DEFAULT_VISIBILITY virtual void SetGuestAddressWindow(uint64_t Base) = 0;
   FEX_DEFAULT_VISIBILITY virtual bool IsCurrentBlockSingleInst(FEXCore::Core::InternalThreadState* Thread) = 0;
   FEX_DEFAULT_VISIBILITY virtual uint64_t GetGuestBlockEntry(FEXCore::Core::InternalThreadState* Thread) = 0;
 

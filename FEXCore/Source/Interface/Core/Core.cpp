@@ -515,7 +515,7 @@ static void IRDumper(FEXCore::Core::InternalThreadState* Thread, IR::IREmitter* 
 }
 
 bool ContextImpl::CheckIfBlockIsCacheable(FEXCore::Core::InternalThreadState& Thread, uint64_t GuestRIP, uint64_t MaxInst) {
-  return Thread.FrontendDecoder->CheckIfCacheable(Thread, reinterpret_cast<const uint8_t*>(GuestRIP), GuestRIP, MaxInst);
+  return Thread.FrontendDecoder->CheckIfCacheable(Thread, GuestCodePointer(GuestRIP), GuestRIP, MaxInst);
 }
 
 ContextImpl::GenerateIRResult
@@ -543,7 +543,7 @@ ContextImpl::GenerateIR(FEXCore::Core::InternalThreadState* Thread, uint64_t Gue
   }
 
   if (!HasCustomIR) {
-    const auto* GuestCode = reinterpret_cast<const uint8_t*>(GuestRIP);
+    const auto* GuestCode = GuestCodePointer(GuestRIP);
 
     Thread->FrontendDecoder->DecodeLoop(GuestCode);
 
@@ -611,7 +611,7 @@ ContextImpl::GenerateIR(FEXCore::Core::InternalThreadState* Thread, uint64_t Gue
 
 #ifdef ZYDIS_DISASSEMBLER
         if (FEXCore::Config::Get_X86DISASSEMBLE()) {
-          const uint8_t* InstBytes = reinterpret_cast<const uint8_t*>(InstAddress);
+          const uint8_t* InstBytes = GuestCodePointer(InstAddress);
           ZydisDisassembledInstruction ZydisInst;
           if (ZYAN_SUCCESS(ZydisDisassembleIntel(ZydisMachineMode, InstAddress, InstBytes, DecodedInfo->InstSize, &ZydisInst))) {
             LogMan::Msg::IFmt("    {:#x}: {}", InstAddress, ZydisInst.text);
@@ -996,7 +996,7 @@ uintptr_t ContextImpl::CompileBlock(FEXCore::Core::CpuStateFrame* Frame, uint64_
       if (DebugData && DebugData->Relocations) {
         Relocations = *DebugData->Relocations;
       }
-      std::span<const uint8_t> GuestCode = {reinterpret_cast<const uint8_t*>(StartAddr), Length};
+      std::span<const uint8_t> GuestCode = {GuestCodePointer(StartAddr), Length};
       const Frontend::Decoder::DecodedBlockInformation* BlockInfo =
         NeedsAddGuestCodeRanges ? Thread->FrontendDecoder->GetDecodedBlockInfo() : nullptr;
       DiskCache.Store(Thread, Region, GuestRIP, *DiskCacheGuestCodeKey, GuestCode, CompiledCode, Relocations, BlockInfo);

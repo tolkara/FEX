@@ -245,7 +245,12 @@ namespace x32 {
     REG_AF,
   };
 
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+  // r24 and r19 hold the guest address window and a translated address, see REG_GUEST_WINDOW.
+  constexpr std::array<ARMEmitter::Register, 12> RA = {
+#else
   constexpr std::array<ARMEmitter::Register, 14> RA = {
+#endif
     // All these callee saved
     ARMEmitter::Reg::r20,
     ARMEmitter::Reg::r21,
@@ -262,9 +267,10 @@ namespace x32 {
     ARMEmitter::Reg::r17,
     ARMEmitter::Reg::r29,
     ARMEmitter::Reg::r30,
-
+#ifndef FEX_GUEST_ADDRESS_WINDOW
     ARMEmitter::Reg::r24,
     ARMEmitter::Reg::r19,
+#endif
   };
 
   constexpr std::array<ARMEmitter::Register, 7> NotPreserved_Dynamic = {
@@ -812,6 +818,11 @@ void Arm64Emitter::FillStaticRegs(FillStaticRegOptions Options) {
 #endif
 
   ldr(REG_CALLRET_SP, STATE.R(), offsetof(FEXCore::Core::CpuStateFrame, State.callret_sp));
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+  if (!EmitterCTX->Config.Is64BitMode()) {
+    ldr(REG_GUEST_WINDOW, STATE.R(), offsetof(FEXCore::Core::CpuStateFrame, Pointers.GuestAddressWindow));
+  }
+#endif
 
   if (Options.NZCV) {
     // Regardless of what GPRs/FPRs we're filling, we need to fill NZCV since it

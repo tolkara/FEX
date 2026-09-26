@@ -715,6 +715,17 @@ void Arm64JITCore::ClearCache() {
   ThreadState->LookupCache->ChangeGuestToHostMapping(*PrevCodeBuffer, *CodeBuffer->LookupCache, lk);
 }
 
+ARMEmitter::Register Arm64JITCore::GetMemReg(IR::OrderedNodeWrapper Wrap) {
+  const auto Reg = GetReg(Wrap);
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+  if (!CTX->Config.Is64BitMode()) {
+    add(ARMEmitter::Size::i64Bit, REG_GUEST_ADDR, REG_GUEST_WINDOW, Reg, ARMEmitter::ExtendedType::UXTW, 0);
+    return REG_GUEST_ADDR;
+  }
+#endif
+  return Reg;
+}
+
 Arm64JITCore::~Arm64JITCore() {}
 
 bool Arm64JITCore::IsInlineConstant(const IR::OrderedNodeWrapper& WNode, uint64_t* Value) const {

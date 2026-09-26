@@ -20,7 +20,7 @@ DEF_OP(CASPair) {
   auto Expected1 = GetReg(Op->ExpectedHi);
   auto Desired0 = GetReg(Op->DesiredLo);
   auto Desired1 = GetReg(Op->DesiredHi);
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
 
   const auto EmitSize = IROp->ElementSize == IR::OpSize::i64Bit ? ARMEmitter::Size::i64Bit : ARMEmitter::Size::i32Bit;
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -99,7 +99,7 @@ DEF_OP(CAS) {
 
   auto Expected = GetReg(Op->Expected);
   auto Desired = GetReg(Op->Desired);
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Dst = GetReg(Node);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -146,7 +146,7 @@ DEF_OP(AtomicSwap) {
                                                                                                                                  "d CAS "
                                                                                                                                  "size");
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   const auto EmitSize = ConvertSize(IROp);
@@ -172,7 +172,7 @@ DEF_OP(AtomicFetchAdd) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -193,7 +193,7 @@ DEF_OP(AtomicFetchSub) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -215,7 +215,7 @@ DEF_OP(AtomicFetchAnd) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -237,7 +237,7 @@ DEF_OP(AtomicFetchCLR) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -258,7 +258,7 @@ DEF_OP(AtomicFetchOr) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -279,7 +279,7 @@ DEF_OP(AtomicFetchXor) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
   auto Src = GetReg(Op->Value);
 
   if (CTX->HostFeatures.SupportsAtomics) {
@@ -300,7 +300,7 @@ DEF_OP(AtomicFetchNeg) {
   const auto EmitSize = ConvertSize(IROp);
   const auto SubEmitSize = ConvertSubRegSize8(IROp->Size);
 
-  auto MemSrc = GetReg(Op->Addr);
+  auto MemSrc = GetMemReg(Op->Addr);
 
   if (CTX->HostFeatures.SupportsAtomics) {
     // Use a CAS loop to avoid needing to emulate unaligned LLSC atomics
