@@ -179,6 +179,20 @@ protected:
     FillStaticRegs({});
   }
 
+#ifdef ARCHITECTURE_arm64ec
+  // Loads TEB->ChpeV2CpuAreaInfo. Windows keeps the TEB in x18; an arm64 Darwin host does not preserve x18, so
+  // Wine keeps it in a pthread TSD slot reached through TPIDRRO_EL0 (FEX_TEB_TSD_OFFSET).
+  void LoadTEBCPUArea(ARMEmitter::XRegister Dst) {
+#ifdef FEX_TEB_TSD_OFFSET
+    mrs(Dst, ARMEmitter::SystemRegister::TPIDRRO_EL0);
+    ldr(Dst, Dst, FEX_TEB_TSD_OFFSET);
+    ldr(Dst, Dst, TEB_CPU_AREA_OFFSET);
+#else
+    ldr(Dst, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+#endif
+  }
+#endif
+
   // Register 0-18 + 29 + 30 are caller saved
   static constexpr uint32_t CALLER_GPR_MASK = 0b0110'0000'0000'0111'1111'1111'1111'1111U;
 

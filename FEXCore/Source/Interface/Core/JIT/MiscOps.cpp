@@ -366,7 +366,7 @@ DEF_OP(MonoBackpatcherWrite) {
   }
 
 #ifdef ARCHITECTURE_arm64ec
-  ldr(TMP2, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+  LoadTEBCPUArea(TMP2);
   LoadConstant(ARMEmitter::Size::i32Bit, TMP1, 1);
   strb(TMP1.W(), TMP2, CPU_AREA_IN_SYSCALL_CALLBACK_OFFSET);
 #endif
@@ -379,7 +379,7 @@ DEF_OP(MonoBackpatcherWrite) {
   }
 
 #ifdef ARCHITECTURE_arm64ec
-  ldr(TMP2, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+  LoadTEBCPUArea(TMP2);
   strb(ARMEmitter::WReg::zr, TMP2, CPU_AREA_IN_SYSCALL_CALLBACK_OFFSET);
 #endif
 

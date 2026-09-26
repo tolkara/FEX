@@ -14,9 +14,23 @@ DispatchJump:
 RetToEntryThunk:
   mov x9, lr
 
+// Loads the TEB into a register. Windows keeps it in x18; on an arm64 Darwin host the kernel does not
+// preserve x18, so Wine keeps it in a pthread TSD slot reached through TPIDRRO_EL0 (FEX_TEB_TSD_OFFSET).
+#ifdef FEX_TEB_TSD_OFFSET
+.macro LOAD_TEB reg
+  mrs \reg, tpidrro_el0
+  ldr \reg, [\reg, #FEX_TEB_TSD_OFFSET]
+.endm
+#else
+.macro LOAD_TEB reg
+  mov \reg, x18
+.endm
+#endif
+
 check_target_ec:
   // Check if target is in fact x86 code
-  ldr x16, [x18, #0x60] // TEB->PEB
+  LOAD_TEB x16
+  ldr x16, [x16, #0x60] // TEB->PEB
   ldr x16, [x16, #0x368] // PEB->EcCodeBitMap
   lsr x17, x9, #18
   ldr x16, [x16, x17, lsl #3]
@@ -32,7 +46,8 @@ ExitToX64:
   str lr, [sp, #-8]! // Push return address to stack, this will be popped by the x86 RET instr.
 
 enter_jit:
-  ldr x17, [x18, #0x1788] // TEB->ChpeV2CpuAreaInfo
+  LOAD_TEB x17
+  ldr x17, [x17, #0x1788] // TEB->ChpeV2CpuAreaInfo
   mov w16, #1
   strb w16, [x17, #0x0] // ChpeV2CpuAreaInfo->InSimulation
   ldr x16, [x17, #0x40] // ChpeV2CpuAreaInfo->EmulatorData[2] - DispatcherLoopTopEnterEC
@@ -41,12 +56,14 @@ enter_jit:
   // Invoked by KiUserEmulationDispatcher after e.g. an NtContinue to x86 code
 .global BeginSimulation
 BeginSimulation:
-  ldr x17, [x18, #0x1788] // TEB->ChpeV2CpuAreaInfo
+  LOAD_TEB x17
+  ldr x17, [x17, #0x1788] // TEB->ChpeV2CpuAreaInfo
   ldr x16, [x17, #0x8] // ChpeV2CpuAreaInfo->EmulatorStackBase
   mov sp, x16
   ldr x0, [x17, #0x18] // ChpeV2CpuAreaInfo->ContextAmd64
   bl "#SyncThreadContext"
-  ldr x17, [x18, #0x1788] // TEB->ChpeV2CpuAreaInfo
+  LOAD_TEB x17
+  ldr x17, [x17, #0x1788] // TEB->ChpeV2CpuAreaInfo
   ldr x16, [x17, #0x48] // ChpeV2CpuAreaInfo->EmulatorData[3] - DispatcherLoopTopEnterECFillSRA
   mov x11, #0 // Zero ENTRY_FILL_SRA_SINGLE_INST_REG to avoid single step
   br x16 // DispatcherLoopTopEnterECFillSRA(SingleInst:x10, CPUArea:x17)
@@ -59,7 +76,8 @@ ExitFunctionEC:
   mrs x17, fpcr
   and x17, x17, #~6 // NEP + AH
   msr fpcr, x17
-  ldr x17, [x18, #0x1788] // TEB->ChpeV2CpuAreaInfo
+  LOAD_TEB x17
+  ldr x17, [x17, #0x1788] // TEB->ChpeV2CpuAreaInfo
   strb wzr, [x17, #0x0] // ChpeV2CpuAreaInfo->InSimulation
   ldr x17, [x17, #0x20] // ChpeV2CpuAreaInfo->SuspendDoorbell
   ldr w17, [x17]

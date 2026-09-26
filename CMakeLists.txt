@@ -109,6 +109,14 @@ elseif (processor MATCHES "^aarch64|^arm64|^armv8\.*")
     set(ARCHITECTURE_arm64ec 1)
     add_compile_definitions(ARCHITECTURE_arm64ec=1)
   endif()
+
+  # Windows modules for Wine on an arm64 Darwin host: the kernel does not preserve x18, so the TEB is
+  # read from the pthread TSD slot Wine keeps it in (byte offset from TPIDRRO_EL0; Wine's
+  # -D__WINE_TEB_TSD_OFFSET) instead of from x18.
+  set(FEX_TEB_TSD_OFFSET "" CACHE STRING "TSD slot offset of the TEB on arm64 Darwin hosts, empty for x18")
+  if (FEX_TEB_TSD_OFFSET)
+    add_compile_definitions(FEX_TEB_TSD_OFFSET=${FEX_TEB_TSD_OFFSET})
+  endif()
 endif()
 
 if (NOT (ARCHITECTURE_arm64 OR ARCHITECTURE_arm64ec OR ARCHITECTURE_x86_64))
