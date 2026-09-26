@@ -1910,7 +1910,8 @@ DEF_OP(MemSet) {
 
   const bool IsAtomic = CTX->IsMemcpyAtomicTSOEnabled();
   const auto Size = IR::OpSizeToSize(Op->Size);
-  const auto MemReg = GetMemReg(Op->Addr);
+  // The guest address: the result is the guest's updated pointer, the window is added to the copy below
+  const auto MemReg = GetReg(Op->Addr);
   const auto Value = GetZeroableReg(Op->Value);
   const auto Length = GetReg(Op->Length);
   const auto Dst = GetReg(Node);
