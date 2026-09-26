@@ -1147,6 +1147,12 @@ void Arm64JITCore::Emulate128BitGather(IR::OpSize Size, IR::OpSize ElementSize, 
         lsl(ConvertSize(AddrSize), TempMemReg, WorkingReg, FEXCore::ilog2(OffsetScale));
       }
     }
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+    if (!CTX->Config.Is64BitMode()) {
+      // The 32-bit arithmetic above wraps to the guest address; translate it for the load.
+      add(ARMEmitter::Size::i64Bit, TempMemReg, REG_GUEST_WINDOW, TempMemReg, ARMEmitter::ExtendedType::UXTW, 0);
+    }
+#endif
 
     // Now that the address is calculated. Do the load.
     switch (ElementSize) {
