@@ -483,6 +483,7 @@ typedef enum _MEMORY_INFORMATION_CLASS {
   MemoryWineUnloadUnixLib,
 #endif
   MemoryFexStatsShm = 2000,
+  MemoryWineJitWriteOffset,
 } MEMORY_INFORMATION_CLASS;
 
 #define SystemEmulationBasicInformation (SYSTEM_INFORMATION_CLASS)62

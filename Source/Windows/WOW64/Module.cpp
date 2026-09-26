@@ -32,6 +32,7 @@ $end_info$
 #include "Windows/Common/Allocator.h"
 #include "Windows/Common/EnvironmentVariablesHandling.h"
 #include "Windows/Common/FEXUnixLib.h"
+#include "Common/ExecutableMemory.h"
 #include "Common/CallRetStack.h"
 #include "Common/JITGuardPage.h"
 #include "Common/Config.h"
@@ -515,6 +516,7 @@ void BTCpuProcessInit() {
   FEX::Config::LoadConfig(fextl::string {ExecutableName}, _environ, FEX::ReadPortabilityInformation());
   FEXCore::Config::ReloadMetaLayer();
   FEX::Windows::Logging::Init();
+  FEX::Windows::InitExecutableWriteOffset();
 
   FEXCore::Config::Set(FEXCore::Config::CONFIG_INTERPRETER_INSTALLED, "0");
   FEXCore::Config::Set(FEXCore::Config::CONFIG_IS64BIT_MODE, "0");
