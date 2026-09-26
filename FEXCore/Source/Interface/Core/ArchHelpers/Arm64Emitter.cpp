@@ -807,7 +807,7 @@ void Arm64Emitter::FillStaticRegs(FillStaticRegOptions Options) {
 
 #ifdef ARCHITECTURE_arm64ec
   // Load STATE in from the CPU area as x28 is not callee saved in the ARM64EC ABI.
-  ldr(TmpReg.X(), ARMEmitter::Reg::r18, TEB_CPU_AREA_OFFSET);
+  LoadTEBCPUArea(TmpReg.X());
   ldr(STATE, TmpReg, CPU_AREA_EMULATOR_DATA_OFFSET);
 #endif
 

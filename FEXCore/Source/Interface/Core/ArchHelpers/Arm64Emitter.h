@@ -180,16 +180,21 @@ protected:
   }
 
 #ifdef ARCHITECTURE_arm64ec
-  // Loads TEB->ChpeV2CpuAreaInfo. Windows keeps the TEB in x18; an arm64 Darwin host does not preserve x18, so
-  // Wine keeps it in a pthread TSD slot reached through TPIDRRO_EL0 (FEX_TEB_TSD_OFFSET).
-  void LoadTEBCPUArea(ARMEmitter::XRegister Dst) {
+  // Loads the TEB. Windows keeps it in x18; an arm64 Darwin host does not preserve x18, so Wine keeps it in a
+  // pthread TSD slot reached through TPIDRRO_EL0 (FEX_TEB_TSD_OFFSET).
+  void LoadTEB(ARMEmitter::XRegister Dst) {
 #ifdef FEX_TEB_TSD_OFFSET
     mrs(Dst, ARMEmitter::SystemRegister::TPIDRRO_EL0);
     ldr(Dst, Dst, FEX_TEB_TSD_OFFSET);
-    ldr(Dst, Dst, TEB_CPU_AREA_OFFSET);
 #else
-    ldr(Dst, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+    mov(ARMEmitter::Size::i64Bit, Dst, ARMEmitter::XReg::x18);
 #endif
+  }
+
+  // Loads TEB->ChpeV2CpuAreaInfo.
+  void LoadTEBCPUArea(ARMEmitter::XRegister Dst) {
+    LoadTEB(Dst);
+    ldr(Dst, Dst, TEB_CPU_AREA_OFFSET);
   }
 #endif
 

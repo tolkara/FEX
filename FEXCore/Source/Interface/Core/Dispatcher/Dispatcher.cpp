@@ -150,7 +150,8 @@ void Dispatcher::EmitDispatcher() {
   // Clobbers TMP1/2
   // Check the EC code bitmap incase we need to exit the JIT to call into native code.
   ARMEmitter::ForwardLabel l_NotECCode;
-  ldr(TMP1, ARMEmitter::XReg::x18, TEB_PEB_OFFSET);
+  LoadTEB(TMP1);
+  ldr(TMP1, TMP1, TEB_PEB_OFFSET);
   ldr(TMP1, TMP1, PEB_EC_CODE_BITMAP_OFFSET);
 
   lsr(ARMEmitter::Size::i64Bit, TMP2, RipReg, 18);
@@ -258,7 +259,7 @@ void Dispatcher::EmitDispatcher() {
 #endif
 
 #ifdef ARCHITECTURE_arm64ec
-    ldr(TMP2, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+    LoadTEBCPUArea(TMP2);
     LoadConstant(ARMEmitter::Size::i32Bit, TMP1, 1);
     strb(TMP1.W(), TMP2, CPU_AREA_IN_SYSCALL_CALLBACK_OFFSET);
 #endif
@@ -266,7 +267,7 @@ void Dispatcher::EmitDispatcher() {
     Body();
 
 #ifdef ARCHITECTURE_arm64ec
-    ldr(TMP2, ARMEmitter::XReg::x18, TEB_CPU_AREA_OFFSET);
+    LoadTEBCPUArea(TMP2);
     strb(ARMEmitter::WReg::zr, TMP2, CPU_AREA_IN_SYSCALL_CALLBACK_OFFSET);
 #endif
 
