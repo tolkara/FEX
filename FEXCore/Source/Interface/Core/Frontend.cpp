@@ -1361,13 +1361,16 @@ const Decoder::DecodeStream Decoder::AdjustAddrForSpecialRegion(const uint8_t* _
     // Offset 0x800: vgetcpu
     uint64_t Offset = RIP - VSyscall_Base;
     return DecodeStream {
-      .InstStream = _InstStream - EntryPoint + RIP,
+      .InstStream = reinterpret_cast<const uint8_t*>(RIP),
       .AdjustedInstStream = VSyscallData + Offset,
     };
   }
 
+  // InstStream is the guest RIP of the bytes being decoded and is only used for executable-range checks, while
+  // AdjustedInstStream is the host pointer the bytes are read from. The two only coincide when guest memory is
+  // identity mapped.
   return DecodeStream {
-    .InstStream = _InstStream - EntryPoint + RIP,
+    .InstStream = reinterpret_cast<const uint8_t*>(RIP),
     .AdjustedInstStream = _InstStream - EntryPoint + RIP,
   };
 }
