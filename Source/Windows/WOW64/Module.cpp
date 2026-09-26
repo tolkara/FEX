@@ -477,12 +477,13 @@ public:
     return ImageTracker->LookupExecutableFileSection(Address);
   }
 
+  // FEXCore hands over guest addresses; the tracker works on host addresses.
   void MarkGuestExecutableRange(FEXCore::Core::InternalThreadState* Thread, uint64_t Start, uint64_t Length) override {
-    InvalidationTracker->ReprotectRWXIntervals(Start, Length);
+    InvalidationTracker->ReprotectRWXIntervals(FEX::Windows::AddressWindow::ToHost(Start), Length);
   }
 
   void InvalidateGuestCodeRange(FEXCore::Core::InternalThreadState* Thread, uint64_t Start, uint64_t Length) override {
-    InvalidationTracker->InvalidateAlignedInterval(Start, Length, false);
+    InvalidationTracker->InvalidateAlignedInterval(FEX::Windows::AddressWindow::ToHost(Start), Length, false);
   }
 
   void MarkOvercommitRange(uint64_t Start, uint64_t Length) override {
@@ -494,7 +495,11 @@ public:
   }
 
   FEXCore::HLE::ExecutableRangeInfo QueryGuestExecutableRange(FEXCore::Core::InternalThreadState* Thread, uint64_t Address) override {
-    return InvalidationTracker->QueryExecutableRange(Address);
+    auto Info = InvalidationTracker->QueryExecutableRange(FEX::Windows::AddressWindow::ToHost(Address));
+    if (Info.Size) {
+      Info.Base = FEX::Windows::AddressWindow::ToGuest(Info.Base);
+    }
+    return Info;
   }
 
   void PreCompile() override {
