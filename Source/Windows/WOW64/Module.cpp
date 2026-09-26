@@ -602,7 +602,8 @@ void BTCpuThreadInit() {
 
   // Default segment setup.
   auto Frame = Thread->CurrentFrame;
-  auto NewSegments = new FEXCore::Core::CPUState::gdt_segment[32]();
+  // The descriptor table lives in the CPU state, where the JIT can read it without a guest memory access.
+  auto NewSegments = Frame->State.private_gdt;
 
   // Setup initial code-segment GDT
   auto& GDT = NewSegments[DefaultWow64CS];
@@ -674,7 +675,6 @@ void BTCpuThreadTerm(HANDLE Thread, LONG ExitCode) {
   delete GetFrontendThreadData(ThreadState);
 
   // GDT and LDT are mirrored, only free one.
-  delete[] ThreadState->CurrentFrame->State.segment_arrays[FEXCore::Core::CPUState::SEGMENT_ARRAY_INDEX_GDT];
 
   FEX::Windows::CallRetStack::DestroyThread(ThreadState);
   CTX->DestroyThread(ThreadState);

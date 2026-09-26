@@ -4206,13 +4206,25 @@ void OpDispatchBuilder::CheckLegacySegmentWrite(Ref NewNode, uint32_t SegmentReg
 }
 
 void OpDispatchBuilder::UpdatePrefixFromSegment(Ref Segment, uint32_t SegmentReg) {
-  // Use BFE to extract the selector index in bits [15,3] of the segment register.
-  // In some cases the upper 16-bits of the 32-bit GPR contain garbage to ignore.
-  auto GDT = _Bfe(OpSize::i32Bit, 1, 2, Segment);
-  // Fun quirk, if we mask the selector then it is premultiplied by 8 which we need to do for accessing anyway.
-  auto SegmentOffset = _And(OpSize::i32Bit, Segment, _Constant(0xfff8));
-  Ref SegmentBase = _LoadContextGPRIndexed(GDT, OpSize::i64Bit, offsetof(FEXCore::Core::CPUState, segment_arrays[0]), 8);
-  Ref NewSegment = _LoadMemGPR(OpSize::i64Bit, SegmentBase, SegmentOffset, OpSize::i8Bit, MemOffsetType::UXTW, 1);
+  Ref NewSegment {};
+#ifdef FEX_GUEST_ADDRESS_WINDOW
+  if (!Is64BitMode) {
+    // The descriptor tables are host memory, and with the guest at a window every memory access takes its address
+    // as a guest one. The frontend keeps a 32-bit guest's descriptors in the CPU state (both tables, the LDT
+    // mirrors the GDT), so read them from there by the selector index.
+    auto Index = _Bfe(OpSize::i32Bit, 5, 3, Segment);
+    NewSegment = _LoadContextGPRIndexed(Index, OpSize::i64Bit, offsetof(FEXCore::Core::CPUState, private_gdt[0]), 8);
+  } else
+#endif
+  {
+    // Use BFE to extract the selector index in bits [15,3] of the segment register.
+    // In some cases the upper 16-bits of the 32-bit GPR contain garbage to ignore.
+    auto GDT = _Bfe(OpSize::i32Bit, 1, 2, Segment);
+    // Fun quirk, if we mask the selector then it is premultiplied by 8 which we need to do for accessing anyway.
+    auto SegmentOffset = _And(OpSize::i32Bit, Segment, _Constant(0xfff8));
+    Ref SegmentBase = _LoadContextGPRIndexed(GDT, OpSize::i64Bit, offsetof(FEXCore::Core::CPUState, segment_arrays[0]), 8);
+    NewSegment = _LoadMemGPR(OpSize::i64Bit, SegmentBase, SegmentOffset, OpSize::i8Bit, MemOffsetType::UXTW, 1);
+  }
   CheckLegacySegmentWrite(NewSegment, SegmentReg);
 
   // Extract the 32-bit base from the GDT segment.
