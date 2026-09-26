@@ -22,10 +22,23 @@ public:
     Size = BaseSize;
   }
 
+  // The buffer is written at this offset from where its code runs (a writable
+  // alias of executable memory); addresses are always those of the code.
+  void SetWriteOffset(ptrdiff_t Offset) {
+    WriteOffset = Offset;
+  }
+
+  // Store an instruction or data word over what was emitted at Location.
+  template<typename T>
+  requires (std::is_trivially_copyable_v<T>)
+  void Patch(T* Location, const T& Data) {
+    std::memcpy(reinterpret_cast<uint8_t*>(Location) + WriteOffset, &Data, sizeof(Data));
+  }
+
   template<typename T>
   requires (std::is_trivially_copyable_v<T>)
   void dcn(const T& Data) {
-    std::memcpy(CurrentOffset, &Data, sizeof(Data));
+    std::memcpy(CurrentOffset + WriteOffset, &Data, sizeof(Data));
     CurrentOffset += sizeof(Data);
   }
   void dc8(uint8_t Data) {
@@ -43,7 +56,7 @@ public:
 
   void EmitString(const char* String) {
     const auto StringLength = strlen(String);
-    memcpy(CurrentOffset, String, StringLength);
+    memcpy(CurrentOffset + WriteOffset, String, StringLength);
     CurrentOffset += StringLength;
   }
 
@@ -53,7 +66,7 @@ public:
     if (!CurrentAlignment) {
       return;
     }
-    std::memset(CurrentOffset, 0, Size - CurrentAlignment);
+    std::memset(CurrentOffset + WriteOffset, 0, Size - CurrentAlignment);
     CurrentOffset += Size - CurrentAlignment;
   }
 
@@ -96,5 +109,6 @@ protected:
   uint8_t* BufferBase;
   uint8_t* CurrentOffset;
   uint64_t Size;
+  ptrdiff_t WriteOffset {};
 };
 } // namespace ARMEmitter

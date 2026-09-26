@@ -19,6 +19,17 @@
 #include <sys/types.h>
 
 namespace FEXCore::Allocator {
+// Where executable memory is written. Some hosts run code only from memory
+// whose executable view never becomes writable (an iPadOS app), and give a
+// writable alias of it at a constant offset; elsewhere the offset is zero and
+// code is written in place.
+FEX_DEFAULT_VISIBILITY extern ptrdiff_t ExecutableWriteOffset;
+
+template<typename T>
+T* WritableCode(T* Code) {
+  return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(Code) + ExecutableWriteOffset);
+}
+
 enum class ProtectOptions : uint32_t {
   None = 0,
   Read = (1U << 0),

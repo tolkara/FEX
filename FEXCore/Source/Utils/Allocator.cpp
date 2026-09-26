@@ -34,6 +34,8 @@ std::pmr::memory_resource* get_default_resource() {
 } // namespace fextl::pmr
 
 namespace FEXCore::Allocator {
+ptrdiff_t ExecutableWriteOffset = 0;
+
 #ifndef _WIN32
 MMAP_Hook mmap {::mmap};
 MUNMAP_Hook munmap {::munmap};
