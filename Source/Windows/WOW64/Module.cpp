@@ -735,6 +735,9 @@ NTSTATUS BTCpuSuspendLocalThread(HANDLE Thread, ULONG* Count) {
   return NtSuspendThread(Thread, Count);
 }
 
+// The widest store a guest instruction makes: the bytes a write fault may have touched lie this close to its address.
+static constexpr uint64_t MaxStoreSize = 32;
+
 // Returns true if exception dispatch should be halted and the execution context restored to Ptrs->Context
 bool BTCpuResetToConsistentStateImpl(EXCEPTION_POINTERS* Ptrs) {
   auto* Context = Ptrs->ContextRecord;
@@ -762,9 +765,12 @@ bool BTCpuResetToConsistentStateImpl(EXCEPTION_POINTERS* Ptrs) {
       std::scoped_lock Lock(ThreadCreationMutex);
       FEXCORE_PROFILE_INSTANT_INCREMENT(Thread, AccumulatedSMCCount, 1);
       if (InvalidationTracker->HandleRWXAccessViolation(Thread, Context->Pc, FaultAddress)) {
+        // Only a write to the running block's own code needs the block left: it restarts the faulting instruction, which is wrong
+        // for one that changed registers before its store (pop to memory has moved the stack pointer). A write elsewhere on the
+        // page, such as a hook's jump slot beside its code, completes and the block continues.
+        const uint64_t GuestFault = FEX::Windows::AddressWindow::ToGuest(FaultAddress);
         if (CTX->IsAddressInCodeBuffer(Thread, Context->Pc) && !CTX->IsCurrentBlockSingleInst(Thread) &&
-            CTX->IsAddressInCurrentBlock(Thread, FEX::Windows::AddressWindow::ToGuest(FaultAddress) & FEXCore::Utils::FEX_PAGE_MASK,
-                                         FEXCore::Utils::FEX_PAGE_SIZE)) {
+            CTX->IsAddressInCurrentBlock(Thread, GuestFault - MaxStoreSize + 1, 2 * MaxStoreSize - 1)) {
           Context::ReconstructThreadState(Context);
           LogMan::Msg::DFmt("Handled inline self-modifying code: pc: {:X} rip: {:X} fault: {:X}", Context->Pc,
                             Thread->CurrentFrame->State.rip, FaultAddress);
