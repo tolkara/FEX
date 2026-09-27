@@ -134,5 +134,6 @@ private:
   fextl::shared_ptr<CodeBuffer> AllocateNew(size_t Size);
 
   bool NameJITBuffers {true};
+  size_t MaxCodeSize;
 };
 } // namespace FEXCore::CPU

@@ -7,6 +7,8 @@
 #include <FEXCore/Utils/LogManager.h>
 #include <FEXCore/Utils/MathUtils.h>
 
+#include <algorithm>
+
 #ifndef _WIN32
 #include <FEXCore/Utils/PrctlUtils.h>
 #endif
@@ -54,6 +56,9 @@ SharedCodeBufferManager::SharedCodeBufferManager() {
   // `perf top` prefers VMA names over the JIT symbols file for some reason.
   // Breaks memory tracking when naming is enabled, but it's a debug feature so it isn't expected to be enabled by default.
   NameJITBuffers = !(GlobalJITNaming || LibraryJITNaming || BlockJITNaming);
+
+  FEX_CONFIG_OPT(MaxCodeBufferSize, MAXCODEBUFFERSIZE);
+  MaxCodeSize = std::clamp<size_t>(MaxCodeBufferSize, INITIAL_CODE_SIZE >> 20, MAX_CODE_SIZE >> 20) << 20;
 }
 
 fextl::shared_ptr<CodeBuffer> SharedCodeBufferManager::AllocateNew(size_t Size) {
@@ -102,11 +107,11 @@ fextl::shared_ptr<CodeBuffer> SharedCodeBufferManager::StartLargerCodeBuffer() {
   }
 
   auto NewCodeBufferSize = GetLatest()->TotalAllocationSize();
-  NewCodeBufferSize = std::min<size_t>(NewCodeBufferSize * 2, MAX_CODE_SIZE);
+  NewCodeBufferSize = std::min<size_t>(NewCodeBufferSize * 2, MaxCodeSize);
   return AllocateNew(NewCodeBufferSize);
 }
 
 fextl::shared_ptr<CodeBuffer> SharedCodeBufferManager::StartMaximalCodeBuffer() {
-  return AllocateNew(MAX_CODE_SIZE);
+  return AllocateNew(MaxCodeSize);
 }
 } // namespace FEXCore::CPU
